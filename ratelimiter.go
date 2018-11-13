@@ -22,25 +22,28 @@ package ratelimiter
 
 import "time"
 
-// RateLimiter limits calles to at most n calls in t time period
+// RateLimiter limits calls to at most n calls in a given time.Duration
 type RateLimiter struct {
 	t  time.Duration
 	ch chan *time.Timer
 }
 
 // NewRateLimiter constructs a rate limiter given a count and duration
-func New(n int, t time.Duration) (r RateLimiter) {
-	r.t = t
-	if n > 0 {
-		r.ch = make(chan *time.Timer, n)
-		for i := 0; i < n; i++ {
-			r.ch <- time.NewTimer(0)
-		}
+func New(n int, t time.Duration) RateLimiter {
+	if n <= 0 || t <= 0 {
+		return RateLimiter{}
+	}
+	r := RateLimiter{
+		t:  t,
+		ch: make(chan *time.Timer, n),
+	}
+	for i := 0; i < n; i++ {
+		r.ch <- time.NewTimer(0)
 	}
 	return r
 }
 
-// Limit will only return n times in t duration. If called more frequently
+// Limit will only return n times within t duration. If called more frequently
 // it blocks until the limit is satisfied
 func (r RateLimiter) Limit() {
 	if r.ch == nil {
